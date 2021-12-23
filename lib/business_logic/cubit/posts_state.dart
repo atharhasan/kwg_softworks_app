@@ -10,3 +10,10 @@ class PostsLoaded extends PostsState {
 
   PostsLoaded(this.posts);
 }
+
+class PostsLoading extends PostsState {
+  final List<Posts> oldPosts;
+  final bool isFirstFetch;
+
+  PostsLoading(this.oldPosts, {this.isFirstFetch = false});
+}

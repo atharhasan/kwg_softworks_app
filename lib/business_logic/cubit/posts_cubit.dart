@@ -1,26 +1,31 @@
-import 'dart:convert';
-
 import 'package:bloc/bloc.dart';
-import 'package:flutter/services.dart';
 import 'package:kwg_softworks/data/models/posts.dart';
+import 'package:kwg_softworks/data/repository/post_repository.dart';
 import 'package:meta/meta.dart';
 
 part 'posts_state.dart';
 
 class PostsCubit extends Cubit<PostsState> {
-  PostsCubit() : super(PostsInitial());
+  PostsCubit(this.postRepository) : super(PostsInitial());
 
-  Future<dynamic> readPosts() async {
-    final String response =
-        await rootBundle.loadString("assets/files/api_file.json");
-    List data = await json.decode(response);
+  int page = 1;
+  final PostRepository postRepository;
 
-    List<Posts> posts = List<Posts>.from(data.map((e) => Posts.fromJson(e)));
-    return posts;
-  }
+  void loadPosts() async {
+    if (state is PostsLoading) return;
+    final currentState = state;
 
-  getPosts() {
-    readPosts().then((posts) {
+    var oldPosts = <Posts>[];
+    if (currentState is PostsLoaded) {
+      oldPosts = currentState.posts;
+    }
+    emit(PostsLoading(oldPosts, isFirstFetch: page == 1));
+
+    // to fetch new posts after loading
+    postRepository.fetchPosts(page).then((newPosts) {
+      page++;
+      final posts = (state as PostsLoading).oldPosts;
+      posts.addAll(newPosts);
       emit(PostsLoaded(posts));
     });
   }

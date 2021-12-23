@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kwg_softworks/business_logic/cubit/posts_cubit.dart';
@@ -16,38 +18,72 @@ class PostsScreen extends StatefulWidget {
 
 class _PostsScreenState extends State<PostsScreen> {
   late List<Posts> posts;
+  final scrollController = ScrollController();
+  bool isLoading = false;
 
   //to launch web site url when clicking icon.
   void _launchURL() async {
     if (await launch(url)) throw 'could not launch $url';
   }
 
-  //call BlocProvider to active it.
-  @override
-  void initState() {
-    super.initState();
-    BlocProvider.of<PostsCubit>(context).getPosts();
-  }
-
-  Widget buildListWidget() {
-    return BlocBuilder<PostsCubit, PostsState>(builder: (context, state) {
-      if (state is PostsLoaded) {
-        posts = (state).posts;
-        return buildedList();
-      } else {
-        return const Center(
-            child: CircularProgressIndicator(
-          color: AppColors.blueApp,
-        ));
+  // to set scroll controller to add listener that allows to load more pages.
+  void setupScrollController(context) {
+    scrollController.addListener(() {
+      if (scrollController.position.atEdge) {
+        if (scrollController.position.pixels != 0) {
+          BlocProvider.of<PostsCubit>(context).loadPosts();
+        }
       }
     });
   }
 
+  //call BlocProvider to active it.
+  @override
+  void initState() {
+    super.initState();
+    setupScrollController(context);
+    BlocProvider.of<PostsCubit>(context).loadPosts();
+  }
+
+  Widget buildListWidget() {
+    return BlocBuilder<PostsCubit, PostsState>(builder: (context, state) {
+      if (state is PostsLoading && state.isFirstFetch) {
+        return progressIndicator();
+      }
+      if (state is PostsLoading) {
+        posts = state.oldPosts;
+        isLoading = true;
+      } else if (state is PostsLoaded) {
+        posts = state.posts;
+      }
+      return buildedList();
+    });
+  }
+
+  Widget progressIndicator() {
+    return const Padding(
+      padding: EdgeInsets.all(8.0),
+      child: Center(
+          child: CircularProgressIndicator(
+        color: AppColors.blueApp,
+      )),
+    );
+  }
+
   Widget buildedList() {
     return ListView.builder(
-        itemCount: 100,
+        controller: scrollController,
+        itemCount: posts.length + (isLoading ? 1 : 0),
         itemBuilder: (context, index) {
-          return PostItem(posts: posts[index]);
+          if (index < posts.length) {
+            return PostItem(posts: posts[index]);
+          } else {
+            Timer(const Duration(milliseconds: 30), () {
+              scrollController
+                  .jumpTo(scrollController.position.maxScrollExtent);
+            });
+            return progressIndicator();
+          }
         });
   }
 

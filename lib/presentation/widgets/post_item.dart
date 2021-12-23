@@ -30,6 +30,7 @@ class PostItem extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(child: customText(posts.id.toString(), Colors.blue)),
             customText(posts.name, AppColors.blueApp),
             customText(posts.email, Colors.blueAccent.shade100),
             customText(posts.body, Colors.black54),
